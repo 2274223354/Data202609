@@ -1,0 +1,112 @@
+
+model {
+
+  # ────────────────────────────────────────────────────────
+  # 第一层：DBH_CV（shannon_dbhR）方程
+  # 协变量：CWD TEM1 PRE1 pH bdod STDAGE（k=1~6）
+  # ────────────────────────────────────────────────────────
+  for(i in 1:N) {
+    mu_CV[i] <- alpha_CV[bin[i]] +
+      delta1[bin[i]] * trait[i] +
+      delta2[bin[i]] * trait_CWM[i] +
+      gamma_CV[1] * CWD[i] +
+      gamma_CV[2] * TEM1[i] +
+      gamma_CV[3] * PRE1[i] +
+      gamma_CV[4] * pH[i] +
+      gamma_CV[5] * bdod[i] +
+      gamma_CV[6] * STDAGE[i]
+
+    DBH_CV[i] ~ dnorm(mu_CV[i], tau_CV)
+  }
+
+  # bin 级随机效应：CV
+  for(j in 1:N_bin) {
+    alpha_CV_mu[j] <- gamma0_CV +
+      gamma_CV_bin[1] * CWD_bin[j] +
+      gamma_CV_bin[2] * TEM1_bin[j] +
+      gamma_CV_bin[3] * PRE1_bin[j] +
+      gamma_CV_bin[4] * pH_bin[j] +
+      gamma_CV_bin[5] * bdod_bin[j] +
+      gamma_CV_bin[6] * STDAGE_bin[j]
+
+    alpha_CV[j] ~ dnorm(alpha_CV_mu[j], tau_alpha_CV)
+    delta1[j]   ~ dnorm(0, tau_delta1)
+    delta2[j]   ~ dnorm(0, tau_delta2)
+  }
+
+  # ────────────────────────────────────────────────────────
+  # 第二层：Carbon_Mg_ha（AGB）方程
+  # ────────────────────────────────────────────────────────
+  for(i in 1:N) {
+    mu_AGB[i] <- mu_alpha_AGB +
+      alpha_AGB[bin[i]] +
+      beta3[bin[i]] * trait[i] +
+      beta4[bin[i]] * trait_CWM[i] +
+      beta5[bin[i]] * mu_CV[i] +
+      gamma_AGB[1] * CWD[i] +
+      gamma_AGB[2] * TEM1[i] +
+      gamma_AGB[3] * PRE1[i] +
+      gamma_AGB[4] * pH[i] +
+      gamma_AGB[5] * bdod[i] +
+      gamma_AGB[6] * STDAGE[i]
+
+    Carbon_Mg_ha[i] ~ dnorm(mu_AGB[i], tau_AGB)
+  }
+
+  # bin 级随机效应：AGB
+  for(j in 1:N_bin) {
+    alpha_AGB[j] ~ dnorm(0, tau_alpha_AGB)
+
+    beta3[j] ~ dnorm(0, tau_beta3)
+    beta4[j] ~ dnorm(0, tau_beta4)
+
+    beta5_mu[j] <- beta5_0 +
+      beta5_1 * FD_bin[j] +
+      beta5_2 * FI_bin[j] +
+      beta5_3 * CWD_bin[j] +
+      beta5_4 * TEM1_bin[j] +
+      beta5_5 * PRE1_bin[j] +
+      beta5_6 * pH_bin[j] +
+      beta5_7 * bdod_bin[j] +
+      beta5_8 * STDAGE_bin[j]
+
+    beta5[j] ~ dnorm(beta5_mu[j], tau_beta5)
+  }
+
+  # ────────────────────────────────────────────────────────
+  # 先验分布
+  # ────────────────────────────────────────────────────────
+
+  mu_alpha_AGB ~ dnorm(0, 1.0E-4)
+  gamma0_CV    ~ dnorm(0, 1.0E-4)
+
+  tau_CV  <- pow(sigma_CV,  -2);  sigma_CV  ~ dunif(0, 5)
+  tau_AGB <- pow(sigma_AGB, -2);  sigma_AGB ~ dunif(0, 5)
+
+  tau_alpha_CV  <- pow(sigma_alpha_CV,  -2);  sigma_alpha_CV  ~ dunif(0, 5)
+  tau_alpha_AGB <- pow(sigma_alpha_AGB, -2);  sigma_alpha_AGB ~ dunif(0, 5)
+  tau_delta1    <- pow(sigma_delta1,    -2);  sigma_delta1    ~ dunif(0, 5)
+  tau_delta2    <- pow(sigma_delta2,    -2);  sigma_delta2    ~ dunif(0, 5)
+  tau_beta3     <- pow(sigma_beta3,     -2);  sigma_beta3     ~ dunif(0, 5)
+  tau_beta4     <- pow(sigma_beta4,     -2);  sigma_beta4     ~ dunif(0, 5)
+  tau_beta5     <- pow(sigma_beta5,     -2);  sigma_beta5     ~ dunif(0, 5)
+
+  # 协变量系数先验（6个）
+  for(k in 1:6) {
+    gamma_CV[k]     ~ dnorm(0, 1.0)
+    gamma_CV_bin[k] ~ dnorm(0, 0.25)
+    gamma_AGB[k]    ~ dnorm(0, 1.0)
+  }
+
+  # beta5 超参数先验（共16个，beta5_0~beta5_8）
+  beta5_0 ~ dnorm(0, 1.0)
+  beta5_1 ~ dnorm(0, 0.25)
+  beta5_2 ~ dnorm(0, 0.25)
+  beta5_3 ~ dnorm(0, 0.25)
+  beta5_4 ~ dnorm(0, 0.25)
+  beta5_5 ~ dnorm(0, 0.25)
+  beta5_6 ~ dnorm(0, 0.25)
+  beta5_7 ~ dnorm(0, 0.25)
+  beta5_8 ~ dnorm(0, 0.25)
+}
+
